@@ -1,47 +1,8 @@
-<script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
-
-                // Convert sheet to JSON to filter blank rows
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
-                var filteredData = jsonData.filter(row => row.some(filledCell));
-
-                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                // Fallback
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
-                }
-
-                // Convert filtered JSON back to CSV
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
-            }
-        }
-        return gk_fileData[filename] || "";
-        }
-        </script><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
   <title>Game Nông Trại - Tăng Gia Nào</title>
   <style>
     :root {
@@ -59,6 +20,7 @@
       min-height: 100vh;
       background-color: #f0f0f0;
       font-family: Arial, sans-serif;
+      touch-action: manipulation; /* Tối ưu touch */
     }
 
     #game-container {
@@ -123,11 +85,11 @@
       position: absolute;
       top: 10px;
       right: 10px;
-      width: 10%;
+      width: auto; /* Tối ưu cho di động */
       background-color: var(--modal-bg);
       padding: 8px 12px;
       border-radius: 5px;
-      font-size: 1em;
+      font-size: clamp(0.8em, 3vw, 1em);
     }
 
     #clock, #money {
@@ -149,13 +111,17 @@
       z-index: 20;
       text-align: center;
       border-radius: 5px;
+      max-height: 80vh;
+      overflow-y: auto; /* Tối ưu cho nội dung dài trên di động */
+      width: 90vw; /* Chiếm gần hết màn hình di động */
     }
 
     .modal button {
       margin: 5px;
-      padding: 5px 10px;
-      font-size: 1em;
+      padding: 10px 20px; /* Lớn hơn cho touch */
+      font-size: clamp(1em, 4vw, 1.2em);
       cursor: pointer;
+      touch-action: manipulation;
     }
 
     #kitchen-error {
@@ -167,8 +133,9 @@
 
     #interaction {
       position: absolute;
-      font-size: 1.2em;
+      font-size: 1.5em; /* Lớn hơn cho touch */
       cursor: pointer;
+      padding: 10px;
     }
 
     #splash-screen {
@@ -190,20 +157,20 @@
     }
 
     #splash-screen h1 {
-      font-size: 4em;
+      font-size: clamp(2em, 8vw, 4em);
       margin-bottom: 20px;
       text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
     }
 
     #splash-screen p {
-      font-size: 2em;
+      font-size: clamp(1.2em, 5vw, 2em);
       margin: 10px;
       cursor: pointer;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
     }
 
     #splash-screen .credit {
-      font-size: 1em;
+      font-size: clamp(0.8em, 3vw, 1em);
       position: absolute;
       bottom: 10px;
       left: 10px;
@@ -214,7 +181,7 @@
       position: absolute;
       bottom: 10px;
       left: 10px;
-      font-size: 0.8em;
+      font-size: clamp(0.6em, 2vw, 0.8em);
       color: black;
       z-index: 10;
     }
@@ -292,9 +259,72 @@
       z-index: 15;
       display: none;
     }
+
+    /* Tối ưu cho di động với media query */
+    @media (max-width: 768px) {
+      .cell {
+        font-size: clamp(0.8em, 6vw, 1.5em);
+      }
+
+      #grid {
+        grid-template-columns: repeat(10, minmax(0, 1fr));
+      }
+
+      .modal {
+        width: 95vw;
+        padding: 10px;
+        font-size: 1.2em;
+      }
+
+      #info-box {
+        top: 5px;
+        right: 5px;
+        font-size: 0.9em;
+      }
+
+      #interaction {
+        font-size: 2em;
+        padding: 15px;
+      }
+    }
+
+    /* Nút điều khiển di chuyển cho di động */
+    #controls {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: grid;
+      grid-template-areas: 
+        ". up ."
+        "left . right"
+        ". down .";
+      grid-gap: 10px;
+      z-index: 15;
+    }
+
+    #controls button {
+      width: 50px;
+      height: 50px;
+      font-size: 1.5em;
+      background-color: #ccc;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    #up { grid-area: up; }
+    #down { grid-area: down; }
+    #left { grid-area: left; }
+    #right { grid-area: right; }
+
+    @media (min-width: 769px) {
+      #controls { display: none; } /* Ẩn nút trên desktop */
+    }
   </style>
 </head>
 <body>
+
   <!-- Splash Screen -->
   <div id="splash-screen">
     <h1>Tăng Gia Nào</h1>
@@ -313,6 +343,14 @@
     </div>
     <div id="interaction" onclick="handleInteraction()">🖐️</div>
     <p id="credit">Game được làm bởi Cao Lộc tiểu đội cối 60mm và Grok AI</p>
+  </div>
+
+  <!-- Nút điều khiển di chuyển cho di động -->
+  <div id="controls">
+    <button id="up">↑</button>
+    <button id="down">↓</button>
+    <button id="left">←</button>
+    <button id="right">→</button>
   </div>
 
   <!-- Modals -->
@@ -528,7 +566,7 @@
     const CONFIG = {
       GRID: { WIDTH: 10, HEIGHT: 10 },
       FARM: { START_COL: 4, TOTAL_CELLS: 60 },
-      TIME: { DAY_DURATION: 6 * 60 * 1000, MINUTE_DURATION: 4 * 1000, START_HOUR: 16 * 60, END_HOUR: 17.5 * 60 },
+      TIME: { DAY_DURATION: 5 * 60 * 1000, MINUTE_DURATION: (5 * 60 * 1000) / 90, START_HOUR: 16 * 60, END_HOUR: 17.5 * 60 }, // SỬA: Đổi thời gian ngày thành 5 phút thực tế
       INITIAL: { MONEY: 500000, UNLOCKED_CELLS: 5, DAYS_LEFT: 730, STAMINA: 100 },
       COSTS: { SEEDS: 1000, LOCK_BASE: 100000, LOCK_INCREMENT: 50000 },
       PLANTS: {
@@ -633,9 +671,9 @@
             cell.classList.add(state.cells[row][col].type);
             if (state.cells[row][col].planted) {
               cell.innerText = state.cells[row][col].weed ? CONFIG.EMOJIS.weed :
-                              state.cells[row][col].pest ? CONFIG.EMOJIS.pest :
-                              state.cells[row][col].ripe ? CONFIG.PLANTS[state.cells[row][col].plantType].emoji :
-                              CONFIG.EMOJIS.seedling;
+                               state.cells[row][col].pest ? CONFIG.EMOJIS.pest :
+                               state.cells[row][col].ripe ? CONFIG.PLANTS[state.cells[row][col].plantType].emoji :
+                               CONFIG.EMOJIS.seedling;
             }
           } else {
             cell.classList.add('grass');
@@ -665,6 +703,8 @@
         Object.assign(state, saved);
         state.game.lastUpdate = Date.now();
         state.game.startDate = new Date(saved.startDate);
+        state.dailyPurchases = { nuoc_ngot: 0, banh_ngot: 0, my_goi: 0 }; // SỬA: Reset dailyPurchases khi load để tránh bug modal căn tin không hoạt động nếu save cũ có mua hàng
+        state.dailyEats = { veggies: 0, dishes: 0 }; // SỬA: Reset dailyEats tương tự
         $('splash-screen').style.display = 'none';
         $('game-container').style.display = 'block';
         initGrid();
@@ -758,6 +798,26 @@
       }
     });
 
+    // Thêm xử lý cho nút di chuyển di động
+    function movePlayer(direction) {
+      if (!state.game.initialized) return;
+      let { row, col } = state.player;
+      if (direction === 'up' && row > 0) row--;
+      if (direction === 'down' && row < CONFIG.GRID.HEIGHT - 1) row++;
+      if (direction === 'left' && col > 0) col--;
+      if (direction === 'right' && col < CONFIG.GRID.WIDTH - 1) col++;
+      if (row !== state.player.row || col !== state.player.col) {
+        state.player.row = row;
+        state.player.col = col;
+        updatePlayerPosition();
+      }
+    }
+
+    $('up').addEventListener('click', () => movePlayer('up'));
+    $('down').addEventListener('click', () => movePlayer('down'));
+    $('left').addEventListener('click', () => movePlayer('left'));
+    $('right').addEventListener('click', () => movePlayer('right'));
+
     // Money Management
     function updateMoney() {
       $('money').innerText = `${state.money} VNĐ`;
@@ -777,7 +837,6 @@
         state.money -= cost;
         state.seeds[type] += amount;
         updateMoney();
-        alert(`Đã mua ${amount} ${type === 'fertilizer' ? 'bao phân bón' : `giống ${type === 'cai' ? 'cải ngọt' : type === 'muop' ? 'mướp' : 'đu đủ'}`}! Tổng: ${state.seeds[type]}`);
         closeModal('shop-modal');
       } else {
         showModal('insufficient-modal');
@@ -795,7 +854,6 @@
         inventory[type] -= sellAmount;
         updateMoney();
         updateWarehouse();
-        alert(`Đã bán ${sellAmount} ${getItemName(type)}, thu ${cost * sellAmount} VNĐ!`);
         checkTaskProgress();
       }
     }
@@ -811,9 +869,7 @@
         state.stamina = Math.min(100, state.stamina + staminaGain);
         if (isDish) state.dailyEats.dishes++; else state.dailyEats.veggies++;
         updateWarehouse();
-        alert(`Đã ăn ${getItemName(type)}, tăng ${staminaGain} thể lực! Thể lực: ${state.stamina}`);
       } else {
-        alert(isDish && eats >= maxEats ? 'Đã ăn món tối đa hôm nay!' : 'Không đủ nông sản/món ăn!');
       }
     }
 
@@ -828,7 +884,7 @@
     function buyCanteenItem(type) {
       const item = CONFIG.CANTEEN[type];
       if (state.dailyPurchases[type] >= item.dailyLimit) {
-        return alert(`Bạn đã mua tối đa ${item.dailyLimit} lần hôm nay!`);
+        return;
       }
       if (state.money < item.price) {
         return showModal('insufficient-modal');
@@ -838,7 +894,6 @@
       state.dailyPurchases[type]++;
       updateMoney();
       updateCanteen();
-      alert(`Đã mua ${getCanteenItemName(type)}, tăng ${item.stamina} thể lực! Thể lực: ${state.stamina}`);
     }
 
     function getCanteenItemName(type) {
@@ -858,7 +913,7 @@
     // Farming Actions
     function plantSingle(type) {
       closeModal('plant-menu');
-      if (state.stamina < 2) return alert('Thể lực không đủ!');
+      if (state.stamina < 2) return;
       if (state.seeds[type] > 0 && state.currentCell && !state.currentCell.planted) {
         state.seeds[type]--;
         Object.assign(state.currentCell, {
@@ -873,7 +928,7 @@
 
     function plantAll(type) {
       closeModal('quick-plant-menu');
-      if (state.stamina < 2) return alert('Thể lực không đủ!');
+      if (state.stamina < 2) return;
       let count = 0;
       for (let row = 0; row < CONFIG.GRID.HEIGHT; row++) {
         for (let col = CONFIG.FARM.START_COL; col < CONFIG.GRID.WIDTH; col++) {
@@ -890,12 +945,11 @@
           }
         }
       }
-      alert(`Đã trồng ${count} cây ${getItemName(type)}!`);
     }
 
     function harvestSingle() {
       closeModal('harvest-menu');
-      if (state.stamina < 2) return alert('Thể lực không đủ!');
+      if (state.stamina < 2) return;
       if (state.currentCell?.ripe) {
         const { plantType } = state.currentCell;
         const amount = plantType === 'cai' ? 1 : Math.floor(Math.random() * 3) + 1;
@@ -914,7 +968,7 @@
 
     function harvestAll() {
       closeModal('harvest-menu');
-      if (state.stamina < 2) return alert('Thể lực không đủ!');
+      if (state.stamina < 2) return;
       let count = 0;
       for (let row = 0; row < CONFIG.GRID.HEIGHT; row++) {
         for (let col = CONFIG.FARM.START_COL; col < CONFIG.GRID.WIDTH; col++) {
@@ -934,13 +988,12 @@
           }
         }
       }
-      alert(`Đã thu hoạch ${count} cây!`);
       checkTaskProgress();
     }
 
     function weedSingle() {
       closeModal('weed-pest-menu');
-      if (state.stamina < 2) return alert('Thể lực không đủ!');
+      if (state.stamina < 2) return;
       if (state.currentCell?.weed) {
         state.currentCell.weed = false;
         state.currentCell.affectedDay = null;
@@ -952,7 +1005,7 @@
 
     function pestSingle() {
       closeModal('weed-pest-menu');
-      if (state.stamina < 2) return alert('Thể lực không đủ!');
+      if (state.stamina < 2) return;
       if (state.currentCell?.pest) {
         state.currentCell.pest = false;
         state.currentCell.affectedDay = null;
@@ -964,7 +1017,7 @@
 
     function weedAll() {
       closeModal('weed-pest-menu');
-      if (state.stamina < 2) return alert('Thể lực không đủ!');
+      if (state.stamina < 2) return;
       let count = 0;
       for (let row = 0; row < CONFIG.GRID.HEIGHT; row++) {
         for (let col = CONFIG.FARM.START_COL; col < CONFIG.GRID.WIDTH; col++) {
@@ -978,12 +1031,11 @@
           }
         }
       }
-      alert(`Đã nhổ ${count} cây cỏ dại!`);
     }
 
     function pestAll() {
       closeModal('weed-pest-menu');
-      if (state.stamina < 2) return alert('Thể lực không đủ!');
+      if (state.stamina < 2) return;
       let count = 0;
       for (let row = 0; row < CONFIG.GRID.HEIGHT; row++) {
         for (let col = CONFIG.FARM.START_COL; col < CONFIG.GRID.WIDTH; col++) {
@@ -997,12 +1049,11 @@
           }
         }
       }
-      alert(`Đã bắt ${count} bọ xít!`);
     }
 
     function waterSingle() {
       closeModal('water-menu');
-      if (state.stamina < 2) return alert('Thể lực không đủ!');
+      if (state.stamina < 2) return;
       if (state.currentCell && !state.currentCell.watered) {
         state.currentCell.watered = true;
         state.stamina -= 2;
@@ -1012,7 +1063,7 @@
 
     function waterAll() {
       closeModal('water-menu');
-      if (state.stamina < 2) return alert('Thể lực không đủ!');
+      if (state.stamina < 2) return;
       let count = 0;
       for (let row = 0; row < CONFIG.GRID.HEIGHT; row++) {
         for (let col = CONFIG.FARM.START_COL; col < CONFIG.GRID.WIDTH; col++) {
@@ -1024,12 +1075,11 @@
           }
         }
       }
-      alert(`Đã tưới nước cho ${count} cây!`);
     }
 
     function fertilizeSingle() {
       closeModal('fertilize-menu');
-      if (state.stamina < 2) return alert('Thể lực không đủ!');
+      if (state.stamina < 2) return;
       if (state.currentCell && !state.currentCell.fertilized && state.seeds.fertilizer > 0) {
         state.seeds.fertilizer--;
         state.currentCell.fertilized = true;
@@ -1040,7 +1090,7 @@
 
     function fertilizeAll() {
       closeModal('fertilize-menu');
-      if (state.stamina < 2) return alert('Thể lực không đủ!');
+      if (state.stamina < 2) return;
       let count = 0;
       for (let row = 0; row < CONFIG.GRID.HEIGHT; row++) {
         for (let col = CONFIG.FARM.START_COL; col < CONFIG.GRID.WIDTH; col++) {
@@ -1053,7 +1103,6 @@
           }
         }
       }
-      alert(`Đã bón phân cho ${count} cây!`);
     }
 
     // Cooking
@@ -1167,16 +1216,17 @@
 
     // Plant Management
     function updatePlants() {
-      if (state.game.lastDayChecked !== state.game.daysLeft) {
-        state.game.lastDayChecked = state.game.daysLeft;
-        const plantedCells = [];
-        for (let row = 0; row < CONFIG.GRID.HEIGHT; row++) {
-          for (let col = CONFIG.FARM.START_COL; col < CONFIG.GRID.WIDTH; col++) {
-            if (state.cells[row][col]?.type === 'plantable' && state.cells[row][col].planted) {
-              plantedCells.push({ row, col });
-            }
+      const plantedCells = [];
+      for (let row = 0; row < CONFIG.GRID.HEIGHT; row++) {
+        for (let col = CONFIG.FARM.START_COL; col < CONFIG.GRID.WIDTH; col++) {
+          if (state.cells[row][col]?.type === 'plantable' && state.cells[row][col].planted) {
+            plantedCells.push({ row, col });
           }
         }
+      }
+
+      if (state.game.lastDayChecked !== state.game.daysLeft) {
+        state.game.lastDayChecked = state.game.daysLeft;
         const maxAffected = Math.floor(plantedCells.length * 0.3);
         let affectedCount = 0;
         plantedCells.forEach(({ row, col }) => {
@@ -1193,18 +1243,21 @@
                 cell[isWeed ? 'weed' : 'pest'] = true;
                 cell.affectedDay = state.game.daysLeft;
                 updateCell(row, col, isWeed ? CONFIG.EMOJIS.weed : CONFIG.EMOJIS.pest);
-                alert(`Cây ${getItemName(cell.plantType)} tại ô [${row},${col}] bị ${isWeed ? 'cỏ dại' : 'bọ xít'}!`);
                 affectedCount++;
               }
-            }
-            if ((cell.weed || cell.pest) && cell.affectedDay !== null && state.game.daysLeft <= cell.affectedDay - 1) {
-              resetCell(cell);
-              updateCell(row, col, '');
-              alert(`Cây tại ô [${row},${col}] đã bị hủy do không xử lý kịp thời!`);
             }
           }
         });
       }
+
+      // SỬA: Di chuyển check chết cây ra loop riêng để kiểm tra mọi lúc, đảm bảo chức năng hoạt động ổn định hơn (không phụ thuộc chỉ vào thay đổi ngày)
+      plantedCells.forEach(({ row, col }) => {
+        const cell = state.cells[row][col];
+        if ((cell.weed || cell.pest) && cell.affectedDay !== null && state.game.daysLeft <= cell.affectedDay - 1) {
+          resetCell(cell);
+          updateCell(row, col, '');
+        }
+      });
 
       for (let row = 0; row < CONFIG.GRID.HEIGHT; row++) {
         for (let col = CONFIG.FARM.START_COL; col < CONFIG.GRID.WIDTH; col++) {
@@ -1283,7 +1336,6 @@
     }
 
     function endDayEarly() {
-      alert('Thể lực cạn kiệt, ngày kết thúc sớm!');
       state.game.earlyEnd = true;
       endDay();
     }
@@ -1294,6 +1346,14 @@
       setTimeout(() => {
         closeModal('end-work-modal');
         $('game-overlay').style.display = 'none';
+        // Hoàn thành tất cả món ăn đang nấu khi tua ngày
+        state.cooking.forEach(c => {
+          state.dishes[c.type]++;
+        });
+        state.cooking = [];
+        updateKitchen();
+        updateWarehouse();
+        checkTaskProgress();
         state.game.daysLeft--;
         state.game.time = CONFIG.TIME.START_HOUR;
         if (state.game.earlyEnd) {
